@@ -1,0 +1,42 @@
+name: Распаковать zip при загрузке
+
+on:
+  push:
+    paths:
+      - 'uploads/*.zip'       # только если файл лежит в папке uploads/
+  workflow_dispatch:          # можно запустить вручную
+
+jobs:
+  unzip:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Скачать репозиторий
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Распаковать все .zip файлы
+      run: |
+        mkdir -p extracted
+        for zipfile in uploads/*.zip; do
+          if [ -f "$zipfile" ]; then
+            echo "Распаковываю $zipfile ..."
+            unzip -o "$zipfile" -d extracted/
+            # mv "$zipfile" extracted/backup/   # можно закомментировать
+          fi
+        done
+
+    - name: Показать что получилось
+      run: ls -la extracted/
+
+    # Если нужно закоммитить распакованные файлы обратно в репозиторий
+    - name: Закоммитить изменения
+      run: |
+        git config user.name "GitHub Action"
+        git config user.email "action@github.com"
+        git add extracted/
+        git commit -m "Автоматическая распаковка zip" || echo "Нечего коммитить"
+        git push
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
